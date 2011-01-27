@@ -16,74 +16,7 @@ describe Child do
   end
 
  
-  describe ".search" do
-    before :each do
-      Sunspot.remove_all(Child)
-    end
-    
-    it "should return empty array if search is not valid" do
-      search = mock("search", :query => "", :valid? => false)
-      Child.search(search).should == []      
-    end
-    
-    it "should return empty array for no match" do
-      search = mock("search", :query => "Nothing", :valid? => true)
-      Child.search(search).should == []
-    end
-
-    it "should return an exact match" do
-      create_child("Exact")
-      search = mock("search", :query => "Exact", :valid? => true)
-      Child.search(search).map(&:name).should == ["Exact"]
-    end
   
-    it "should return a match that starts with the query" do
-      create_child("Starts With")
-      search = mock("search", :query => "Star", :valid? => true)      
-      Child.search(search).map(&:name).should == ["Starts With"]
-    end
-    
-    it "should return a fuzzy match" do
-      create_child("timithy")
-      create_child("timothy")
-      search = mock("search", :query => "timothy", :valid? => true)      
-      Child.search(search).map(&:name).should =~ ["timithy", "timothy"]
-    end
-    
-    it "should search by exact match for unique id" do
-      uuid = UUIDTools::UUID.random_create.to_s
-      Child.create("name" => "kev", :unique_identifier => uuid, "last_known_location" => "new york")
-      Child.create("name" => "kev", :unique_identifier => UUIDTools::UUID.random_create, "last_known_location" => "new york")
-      search = mock("search", :query => uuid, :valid? => true)      
-      results = Child.search(search)
-      results.length.should == 1
-      results.first[:unique_identifier].should == uuid
-    end
-    
-    it "should match more than one word" do
-      create_child("timothy cochran") 
-      search = mock("search", :query => "timothy cochran", :valid? => true)           
-      Child.search(search).map(&:name).should =~ ["timothy cochran"]
-    end
-    
-    it "should match more than one word with fuzzy search" do
-      create_child("timothy cochran")      
-      search = mock("search", :query => "timithy cichran", :valid? => true)           
-      Child.search(search).map(&:name).should =~ ["timothy cochran"]
-    end
-    
-    it "should match more than one word with starts with" do
-      create_child("timothy cochran")
-      search = mock("search", :query => "timo coch", :valid? => true)                 
-      Child.search(search).map(&:name).should =~ ["timothy cochran"]
-    end
-    
-    # it "should search across name and unique identifier" do
-    #   Child.create("name" => "John Doe", "last_known_location" => "new york", "unique_identifier" => "ABC123")
-    #   
-    #   Child.search("ABC123").map(&:name).should == ["John Doe"]
-    # end
-  end
 
   describe "update_properties_with_user_name" do
     it "should reple old properties with updated ones" do
@@ -155,50 +88,51 @@ describe Child do
   end
   
   describe "validation of custom fields" do
-    
+    it "should fail to validate if no fields are filled in and no photo/audio attached" do      
+      child = Child.new
+      stub_enabled_fields [Field.new(:type => 'numeric_field', :name => 'height', :display_name => "height")]
+      child.should_not be_valid_for_create
+      child.errors[:has_at_least_one_field_value].should == ["Please fill in at least one field or upload a file"]
+    end
     it "should validate numeric types" do
-      fields = [{:type => 'numeric_field', :name => 'height', :display_name => "height"}]
+      stub_enabled_fields [Field.new(:type => 'numeric_field', :name => 'height', :display_name => "height")]
       child = Child.new
       child[:height] = "very tall"
-      FormSection.stub!(:all_enabled_child_fields).and_return(fields)
       
       child.should_not be_valid
       child.errors.on(:height).should == ["height must be a valid number"]
     end
     
     it "should validate multiple numeric types" do
-      fields = [
-        {:type => 'numeric_field', :name => 'height', :display_name => "height"},
-        {:type => 'numeric_field', :name => 'new_age', :display_name => "new age"}]
+      stub_enabled_fields [
+        Field.new(:type => Field::NUMERIC_FIELD, :name => 'height', :display_name => "height"),
+        Field.new(:type => Field::NUMERIC_FIELD, :name => 'new_age', :display_name => "new age")]
+        
       child = Child.new
       child[:height] = "very tall"
       child[:new_age] = "very old"
-      FormSection.stub!(:all_enabled_child_fields).and_return(fields)
       
       child.should_not be_valid
       child.errors.on(:height).should == ["height must be a valid number"]
       child.errors.on(:new_age).should == ["new age must be a valid number"]
     end
     it "should disallow text field values to be more than 200 chars" do
-      FormSection.stub!(:all_enabled_child_fields =>
-          [Field.new(:type => Field::TEXT_FIELD, :name => "name", :display_name => "Name"), 
-           Field.new(:type => Field::CHECK_BOX, :name => "not_name")])
+      stub_enabled_fields [Field.new(:type => Field::TEXT_FIELD, :name => "name", :display_name => "Name"), 
+           Field.new(:type => Field::CHECK_BOX, :name => "not_name")]
       child = Child.new :name => ('a' * 201)
       child.should_not be_valid
       child.errors[:name].should == ["Name cannot be more than 200 characters long"]
     end
 
     it "should disallow text area values to be more than 400,000 chars" do
-      FormSection.stub!(:all_enabled_child_fields =>
-          [Field.new(:type => Field::TEXT_AREA, :name => "a_textfield", :display_name => "A textfield")])
+      stub_enabled_fields [Field.new(:type => Field::TEXT_AREA, :name => "a_textfield", :display_name => "A textfield")]
       child = Child.new :a_textfield => ('a' * 400_001)
       child.should_not be_valid
       child.errors[:a_textfield].should == ["A textfield cannot be more than 400000 characters long"]
     end
 
     it "should allow text area values to be 400,000 chars" do
-      FormSection.stub!(:all_enabled_child_fields =>
-          [Field.new(:type => Field::TEXT_AREA, :name => "a_textfield", :display_name => "A textfield")])
+      stub_enabled_fields [Field.new(:type => Field::TEXT_AREA, :name => "a_textfield", :display_name => "A textfield")]
       child = Child.new :a_textfield => ('a' * 400_000)
       child.should be_valid
     end
@@ -226,8 +160,7 @@ describe Child do
     end
 
     it "should pass numeric fields that are valid numbers to 1 dp" do
-      FormSection.stub!(:all_enabled_child_fields =>
-          [Field.new(:type => Field::NUMERIC_FIELD, :name => "height")])
+      stub_enabled_fields [Field.new(:type => Field::NUMERIC_FIELD, :name => "height")]
       Child.new(:height => "10.2").should be_valid
     end
     
@@ -235,7 +168,7 @@ describe Child do
       child = Child.new
 
       child.photo = uploadable_photo_gif
-      child.save.should == false
+      child.should_not be_valid
 
       child.photo = uploadable_photo_bmp
       child.save.should == false
@@ -265,13 +198,13 @@ describe Child do
     end
     
     it "should disallow age that is not a number" do
-      fields = [Field.new(:type=>Field::NUMERIC_FIELD,:name=>"age")]
-      FormSection.stub!(:all_enabled_child_fields).and_return fields
+      stub_enabled_fields  [Field.new(:type=>Field::NUMERIC_FIELD,:name=>"age")]
       child = Child.new({:age => "not num"})
       child.save.should == false
     end
 
     it "should disallow age less than 1" do
+      stub_enabled_fields [Field.new(:type=>Field::NUMERIC_FIELD,:name=>"age")]
       child = Child.new({:age => "1"})
       child.save.should == true
       
@@ -280,16 +213,16 @@ describe Child do
     end
     
     it "should disallow age greater than 99" do
+      stub_enabled_fields [Field.new(:type=>Field::NUMERIC_FIELD,:name=>"age")]
       child = Child.new({:age => "99"})
-      child.save.should == true
+      child.should be_valid
       
       child = Child.new({:age => "100"})
-      child.save.should == false
+      child.should_not be_valid
     end
     
     it "should disallow age more than 1 dp" do
-      fields = [Field.new(:type=>Field::NUMERIC_FIELD,:name=>"age")]
-      FormSection.stub!(:all_enabled_child_fields).and_return fields
+      stub_enabled_fields [Field.new(:type=>Field::NUMERIC_FIELD,:name=>"age")]
       child = Child.new({:age => "10.1"})
       child.save.should == true
       
@@ -297,19 +230,16 @@ describe Child do
       child.save.should == false
     end
     
-    it "should allow blank age" do
-      fields = [Field.new(:type=>Field::NUMERIC_FIELD,:name=>"age")]
-      FormSection.stub!(:all_enabled_child_fields).and_return fields
-      child = Child.new({:age => ""})
-      child.save.should == true
-      
-      child = Child.new
-      child.save.should == true
+    it "should allow blank age if at least one other field is filled" do
+      stub_enabled_fields [Field.new(:type=>Field::NUMERIC_FIELD,:name=>"age"),Field.new(:type=>Field::TEXT_FIELD,:name=>"name")]      
+      child = Child.new({:age => "", :name=>"Bob"})
+      child.should be_valid
+      child = Child.new({:age => nil, :name=>"Bob"})
+      child.should be_valid
     end
 
     it "should show error message for age if not valid" do
-      fields = [Field.new(:type=>Field::NUMERIC_FIELD,:name=>"age", :display_name=>"Age")]
-      FormSection.stub!(:all_enabled_child_fields).and_return fields
+      stub_enabled_fields [Field.new(:type=>Field::NUMERIC_FIELD,:name=>"age", :display_name=>"Age")]
       child = Child.new({:age => "not num"})
       child.save.should == false
       child.errors.on("age").should == ["Age must be a valid number"]
@@ -322,19 +252,15 @@ describe Child do
     end
     
     it "should disallow image file formats that are not png or jpg" do
-      photo = uploadable_photo
-
+      stub_enabled_fields  [Field.new(:type=>Field::PHOTO_UPLOAD_BOX,:name=>"photo", :display_name=>"Photo")]
+      
       child = Child.new
-      child.photo = photo
+      child.photo = uploadable_photo
+      child.should be_valid
 
-      child.save.should == true
-
-
-      loaded_child = Child.get(child.id)
-      loaded_child.save().should == true
-
-      loaded_child.photo = uploadable_text_file
-      loaded_child.save().should == false
+      child_with_invalid_image = Child.new
+      child_with_invalid_image.photo = uploadable_text_file
+      child_with_invalid_image.should_not be_valid
     end
   end
 
@@ -723,8 +649,8 @@ describe Child do
 
   describe ".photo" do
     it "should return nil if the record has no attached photo" do
-      child = create_child "Bob McBobberson"
-      Child.all.find{|c| c.id == child.id}.photo.should be_nil
+      child = Child.new(:name=> "Bob McBobberson")
+      child.photo.should be_nil
     end
   end
   
@@ -741,5 +667,9 @@ describe Child do
   def create_child(name)
     Child.create("name" => name, "last_known_location" => "new york")
   end 
+  
+  def stub_enabled_fields fields
+      FormSection.stub!(:all_enabled_child_fields).and_return fields
+  end
 
 end

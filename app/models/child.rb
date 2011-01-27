@@ -32,7 +32,17 @@ class Child < CouchRestRails::Document
   validates_fields_of_type Field::TEXT_AREA
   validates_fields_of_type Field::DATE_FIELD
   validates_with_method :age, :method => :validate_age
-    
+  validates_with_method :has_at_least_one_field_value, :on => :create
+  
+  def has_at_least_one_field_value
+    return true if FormSection.all_enabled_child_fields.any? do |field| 
+      !self[field.name].nil? && self[field.name].length>0
+    end
+    return true if !@file_name.nil? || !@audio_file_name.nil?
+    [false, "Please fill in at least one field or upload a file"]
+  end
+  
+  
   def validate_age
     return true if age.nil? || age.blank? || !age.is_number? || (age =~ /^\d{1,2}(\.\d)?$/ && age.to_f > 0 && age.to_f < 100)
     [false, "Age must be between 1 and 99"]
