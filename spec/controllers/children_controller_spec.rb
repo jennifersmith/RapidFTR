@@ -1,6 +1,11 @@
 require 'spec_helper'
 
 describe ChildrenController do
+  
+  def stub_out_child_get(mock_child = mock(Child))    
+    Child.stub(:get).and_return( mock_child )
+    mock_child
+  end
   before do
     Clock.fake_time_now = Time.utc(2000, "jan", 1, 20, 15, 1)
     fake_login
@@ -28,13 +33,14 @@ describe ChildrenController do
 
   describe "GET show" do
     it "assigns the requested child" do
-      Child.stub!(:get).with("37").and_return(mock_child)
+      child = Factory.build(:child)
+      stub_out_child_get child
       get :show, :id => "37"
-      assigns[:child].should equal(mock_child)
+      assigns[:child].should equal(child)
     end
 
     it "orders and assigns the forms" do
-      Child.stub!(:get).with("37").and_return(mock_child)
+      stub_out_child_get Factory.build(:child)
       FormSection.should_receive(:enabled_by_order).and_return([:the_form_sections])
       get :show, :id => "37"
       assigns[:form_sections].should == [:the_form_sections]
@@ -43,9 +49,10 @@ describe ChildrenController do
 
   describe "GET new" do
     it "assigns a new child as @child" do
-      Child.stub!(:new).and_return(mock_child)
+      child = Factory.build(:child)
+      Child.stub!(:new).and_return(child)
       get :new
-      assigns[:child].should equal(mock_child)
+      assigns[:child].should equal(child)
     end
 
     it "orders and assigns the forms" do
@@ -87,32 +94,36 @@ describe ChildrenController do
   end
 
   describe "PUT update" do
-    it "should update child on a field and photo update" do
-      child = Child.create('last_known_location' => "London", 'photo' => uploadable_photo)
-
+    it "should update child with fields" do
+      child = Factory.create(:child)
+      
+      put :update, :id => child.id, :child => {:last_known_location => "Manchester" }
+      
+      updated_child = Child.get(child.id)
+      updated_child["last_known_location"].should == "Manchester"
+    end
+    it "should update child with new photo attachments" do
+      child = Factory.create(:child)
       current_time = Time.parse("Jan 17 2010 14:05:32")
       Time.stub!(:now).and_return current_time
-      put :update, :id => child.id,
-        :child => {
-          :last_known_location => "Manchester",
-          :photo => uploadable_photo_jeff }
-
-      assigns[:child]['last_known_location'].should == "Manchester"
-      assigns[:child]['_attachments'].size.should == 2
-      assigns[:child]['_attachments']['photo-2010-01-17T140532']['data'].should_not be_blank
+      
+      put :update, :id => child.id, :child => {:photo => uploadable_photo_jeff }
+      
+      updated_child = Child.get(child.id)
+      updated_child['_attachments'].size.should == 1
+      updated_child['_attachments']['photo-2010-01-17T140532'].should_not be_blank
     end
 
     it "should update only non-photo fields when no photo update" do
-      child = Child.create('last_known_location' => "London", 'photo' => uploadable_photo)
-
+      child = Factory.create(:child_with_photo)
       put :update, :id => child.id,
         :child => {
           :last_known_location => "Manchester",
           :age => '7'}
-
-      assigns[:child]['last_known_location'].should == "Manchester"
-      assigns[:child]['age'].should == "7"
-      assigns[:child]['_attachments'].size.should == 1
+      updated_child = Child.get(child.id)
+      updated_child['last_known_location'].should == "Manchester"
+      updated_child['age'].should == "7"
+      updated_child['_attachments'].size.should == 1
     end
 
     it "should update history on photo update" do
@@ -218,16 +229,16 @@ describe ChildrenController do
 
       it 'should render a row for each result, plus a header row' do
         inject_results( [
-          Child.new( 'name' => 'Dave' ),
-          Child.new( 'name' => 'Mary' )
+          Factory.build(:child),
+          Factory.build(:child)
         ] );
         csv_response.split("\n").length.should == 3
       end
 
       it "should render each record's name and age correctly" do
         inject_results( [
-          Child.new( 'name' => 'Dave', 'age' => 145, 'unique_identifier' => 'dave_xxx' ),
-          Child.new( 'name' => 'Mary', 'age' => 12, 'unique_identifier' => 'mary_xxx' )
+          Factory.build(:child,'name' => 'Dave', 'age' => 145, 'unique_identifier' => 'dave_xxx' ),
+          Factory.build(:child, 'name' => 'Mary', 'age' => 12, 'unique_identifier' => 'mary_xxx' )
         ] );
         rows = csv_response.split("\n").map{ |line| line.split(",") }
         rows.shift # skip past header row
@@ -292,10 +303,6 @@ describe ChildrenController do
       stub_pdf_generator
     end
 
-    def stub_out_child_get(mock_child = mock(Child))
-      Child.stub(:get).and_return( mock_child )
-      mock_child
-    end
 
     it 'extracts a single selected id from post params correctly' do
       stub_out_pdf_generator
@@ -362,8 +369,8 @@ describe ChildrenController do
 
   describe "GET export_photo_to_pdf" do
     it "should return the photo wall pdf for selected child" do
-      Child.should_receive(:get).with('1').and_return(
-        stub_child = stub('child', :unique_identifier => '1'))
+      stub_child = Factory.build(:child,:unique_identifier => '1')
+      stub_out_child_get stub_child
 
       PdfGenerator.should_receive(:new).and_return(pdf_generator = mock('pdf_generator'))
       pdf_generator.should_receive(:child_photo).with(stub_child).and_return(:fake_pdf_data)
