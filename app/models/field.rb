@@ -21,6 +21,7 @@ class Field < Hash
   AUDIO_UPLOAD_BOX = "audio_upload_box"
   DATE_FIELD = "date_field"
    
+
   FIELD_FORM_TYPES = {  TEXT_FIELD       => "basic", 
                         TEXT_AREA        => "basic",
                         RADIO_BUTTON     => "multiple_choice",
@@ -31,6 +32,18 @@ class Field < Hash
                         DATE_FIELD       => "basic",
                         NUMERIC_FIELD    => "basic"}
   
+                        
+  DEFAULT_VALUES = {  TEXT_FIELD       => "", 
+                        TEXT_AREA        => "",
+                        RADIO_BUTTON     => "",
+                        SELECT_BOX       => "",
+                        CHECK_BOX        => "No",
+                        PHOTO_UPLOAD_BOX => nil,
+                        AUDIO_UPLOAD_BOX => nil,
+                        DATE_FIELD       => "",
+                        NUMERIC_FIELD    => ""}
+                        
+                        
   validates_presence_of :display_name 
   validates_with_method :display_name, :method => :validate_unique
   validates_with_method :option_strings, :method => :validate_has_2_options
@@ -82,6 +95,11 @@ class Field < Hash
     self[:option_strings].join("\n") 
   end
   
+  def default_value
+    raise "Cannot find default value for type " + type unless DEFAULT_VALUES.has_key? type
+    return DEFAULT_VALUES[type]
+  end
+  
   def tag_id
     "child_#{name}"
   end
@@ -128,4 +146,5 @@ class Field < Hash
   def self.new_select_box field_name, option_strings, display_name = nil
     Field.new :name => field_name, :display_name=>display_name||field_name.humanize, :type => SELECT_BOX, :option_strings => option_strings
   end
+  
 end

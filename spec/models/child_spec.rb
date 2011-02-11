@@ -15,9 +15,6 @@ describe Child do
     FormSection.stub!(:all).and_return([form_section])
   end
 
- 
-  
-
   describe "update_properties_with_user_name" do
     it "should reple old properties with updated ones" do
       child = Child.new("name" => "Dave", "age" => "28", "last_known_location" => "London")
@@ -89,6 +86,12 @@ describe Child do
   
   describe "validation of custom fields" do
     it "should fail to validate if no fields are filled in and no photo/audio attached" do      
+      child = Child.new
+      stub_enabled_fields [Field.new(:type => 'numeric_field', :name => 'height', :display_name => "height")]
+      child.should_not be_valid_for_create
+      child.errors[:has_at_least_one_field_value].should == ["Please fill in at least one field or upload a file"]
+    end
+    it "should fail to validate if only no-defaulting radio " do      
       child = Child.new
       stub_enabled_fields [Field.new(:type => 'numeric_field', :name => 'height', :display_name => "height")]
       child.should_not be_valid_for_create
