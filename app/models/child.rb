@@ -35,9 +35,7 @@ class Child < CouchRestRails::Document
   validates_with_method :has_at_least_one_field_value, :on => :create
   
   def has_at_least_one_field_value
-    return true if FormSection.all_enabled_child_fields.any? do |field| 
-      !self[field.name].nil? && self[field.name].length>0
-    end
+    return true if FormSection.all_enabled_child_fields.any? { |field| is_filled_in? field }
     return true if !@file_name.nil? || !@audio_file_name.nil?
     [false, "Please fill in at least one field or upload a file"]
   end
@@ -205,6 +203,10 @@ class Child < CouchRestRails::Document
     return false if self[field_name].blank? && @from_child[field_name].blank?
     return true if @from_child[field_name].blank?
     self[field_name].strip != @from_child[field_name].strip
+  end
+  
+  def is_filled_in? field
+    !(self[field.name].nil? || self[field.name] == field.default_value)
   end
 
   private

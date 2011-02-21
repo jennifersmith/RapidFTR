@@ -85,15 +85,18 @@ describe Child do
   end
   
   describe "validation of custom fields" do
-    it "should fail to validate if no fields are filled in and no photo/audio attached" do      
+    it "should fail to validate if all fields are nil" do      
       child = Child.new
       stub_enabled_fields [Field.new(:type => 'numeric_field', :name => 'height', :display_name => "height")]
       child.should_not be_valid_for_create
       child.errors[:has_at_least_one_field_value].should == ["Please fill in at least one field or upload a file"]
     end
-    it "should fail to validate if only no-defaulting radio " do      
-      child = Child.new
-      stub_enabled_fields [Field.new(:type => 'numeric_field', :name => 'height', :display_name => "height")]
+    it "should fail to validate if all fields on child record are the default values" do      
+      child = Child.new({:height=>"",:reunite_with_mother=>"No", :current_photo_key=>nil})
+      stub_enabled_fields [
+                Field.new(:type => Field::NUMERIC_FIELD, :name => 'height'),
+                Field.new(:type => Field::CHECK_BOX, :name => 'reunite_with_mother'),
+                Field.new(:type => Field::PHOTO_UPLOAD_BOX, :name => 'current_photo_key') ]
       child.should_not be_valid_for_create
       child.errors[:has_at_least_one_field_value].should == ["Please fill in at least one field or upload a file"]
     end

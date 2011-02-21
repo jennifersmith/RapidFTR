@@ -86,7 +86,7 @@ describe "Child record field view model" do
   end
   
   describe "default_value" do
-    it "should be empty string for text entry, radio and select fields" do
+    it "should be empty string for text entry, radio, audio, photo and select fields" do
       Field.new(:type=>Field::TEXT_FIELD).default_value.should == ""
       Field.new(:type=>Field::NUMERIC_FIELD).default_value.should == ""
       Field.new(:type=>Field::TEXT_AREA).default_value.should == ""
