@@ -88,7 +88,7 @@ describe Child do
     it "should fail to validate if all fields are nil" do      
       child = Child.new
       stub_enabled_fields [Field.new(:type => 'numeric_field', :name => 'height', :display_name => "height")]
-      child.should_not be_valid_for_create
+      child.should_not be_valid
       child.errors[:has_at_least_one_field_value].should == ["Please fill in at least one field or upload a file"]
     end
     it "should fail to validate if all fields on child record are the default values" do      
@@ -97,8 +97,13 @@ describe Child do
                 Field.new(:type => Field::NUMERIC_FIELD, :name => 'height'),
                 Field.new(:type => Field::CHECK_BOX, :name => 'reunite_with_mother'),
                 Field.new(:type => Field::PHOTO_UPLOAD_BOX, :name => 'current_photo_key') ]
-      child.should_not be_valid_for_create
+      child.should_not be_valid
       child.errors[:has_at_least_one_field_value].should == ["Please fill in at least one field or upload a file"]
+    end
+    it "should validate if there are form fields filled in which are not defined" do
+      child = Child.new({:foo=>"This field does not exist in the formsections"})
+      stub_enabled_fields [Field.new(:type => 'numeric_field', :name => 'height', :display_name => "height")]
+      child.should be_valid
     end
     it "should validate numeric types" do
       stub_enabled_fields [Field.new(:type => 'numeric_field', :name => 'height', :display_name => "height")]
@@ -162,7 +167,7 @@ describe Child do
       FormSection.stub!(:all_enabled_child_fields =>
           [Field.new(:type => Field::TEXT_FIELD, :name => "name"),
            Field.new(:type => Field::TEXT_AREA, :name => "another")])
-      Child.new(:name => nil).should be_valid
+      Child.new(:name => nil, :another=>"Foo").should be_valid
     end
 
     it "should pass numeric fields that are valid numbers to 1 dp" do

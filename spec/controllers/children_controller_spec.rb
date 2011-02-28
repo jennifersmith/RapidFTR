@@ -20,7 +20,7 @@ describe ChildrenController do
   end
 
   before do
-    FormSection.stub!(:all_child_field_names).and_return(["name", "age", "origin","current_photo_key"])
+    FormSection.stub!(:all_child_field_names).and_return(["name", "age", "origin","current_photo_key"])   
   end
 
   describe "GET index" do

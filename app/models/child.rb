@@ -32,11 +32,12 @@ class Child < CouchRestRails::Document
   validates_fields_of_type Field::TEXT_AREA
   validates_fields_of_type Field::DATE_FIELD
   validates_with_method :age, :method => :validate_age
-  validates_with_method :has_at_least_one_field_value, :on => :create
+  validates_with_method :has_at_least_one_field_value
   
   def has_at_least_one_field_value
     return true if FormSection.all_enabled_child_fields.any? { |field| is_filled_in? field }
     return true if !@file_name.nil? || !@audio_file_name.nil?
+    return true if deprecated_fields.any?{|key,value| !value.nil?}
     [false, "Please fill in at least one field or upload a file"]
   end
   
@@ -180,6 +181,14 @@ class Child < CouchRestRails::Document
     self['last_updated_by'].blank? || user_names_after_deletion.blank?
   end
 
+  
+  def deprecated_fields
+    existing_fields = ["created_at", "_rev", "_id", "created_by", "couchrest-type", "histories", "unique_identifier"] + FormSection.all_enabled_child_fields.map {|x| x.name}
+    v = self.reject {|k,v| existing_fields.include? k} 
+    puts v
+    v
+  end
+  
   protected
 
   def current_formatted_time
@@ -217,4 +226,5 @@ class Child < CouchRestRails::Document
                       :file => attachment.data
 
   end
+  
 end
