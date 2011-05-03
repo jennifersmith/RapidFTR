@@ -79,10 +79,7 @@ RapidFTR.childPhotoRotation = {
 };
 
 $(document).ready(function() {
-});
-
-$(document).ready(function() {
-  RapidFTR.tabControl();
+  new RapidFTR.tabControl().init();
   RapidFTR.enableSubmitLinks();
   RapidFTR.activateToggleFormSectionLinks();
   RapidFTR.hideDirectionalButtons();

@@ -2,10 +2,10 @@
 Barista.configure do |c|
 
   # Change the root to use app/scripts
-  c.root = Rails.root.join("app", "coffeescript")
+  c.root = Rails.root.join("app", "coffeescripts")
 
   # Change the output root, causing Barista to compile into public/coffeescripts
-  # c.output_root = Rails.root.join("public", "coffeescripts")
+  c.output_root = Rails.root.join("public","javascripts", "coffeescripts")
   #
   # Disable auto compile, use generated file directly:
   # c.auto_compile = false
@@ -38,11 +38,6 @@ Barista.configure do |c|
   # c.change_output_prefix! :tests, Rails.root.join('spec', 'javascripts')
 
   # or, hook into the compilation:
-
-  c.before_compilation   { |path|         puts "Barista: Compiling #{path}" }
-  c.on_compilation       { |path|         puts "Barista: Successfully compiled #{path}" }
-  c.on_compilation_error { |path, output| puts "Barista: Compilation of #{path} failed with:\n#{output}" }
-  c.on_compilation_with_warning { |path, output| puts "Barista: Compilation of #{path} had a warning:\n#{output}" }
 
   # Turn off preambles and exceptions on failure:
 
