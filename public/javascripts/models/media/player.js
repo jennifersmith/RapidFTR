@@ -1,5 +1,5 @@
-/* DO NOT MODIFY. This file was compiled Thu, 28 Apr 2011 02:17:03 GMT from
- * /Users/ndrew/IdeaProjects/ThoughtWorks/RapidFTR/RapidFTR/app/coffeescripts/models/media/player.coffee
+/* DO NOT MODIFY. This file was compiled Mon, 02 May 2011 11:07:37 GMT from
+ * /Users/jsmith/dev/RapidFTR/dev/app/coffeescripts/models/media/player.coffee
  */
 
 (function() {
