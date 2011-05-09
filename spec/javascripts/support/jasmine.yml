@@ -12,7 +12,8 @@
 #
 src_files:
   - javascripts/*.js
-  - javascripts/models/**/*.js
+  - javascripts/coffeescripts/*.js
+  - javascripts/coffeescripts/models/**/*.js
 
 # stylesheets
 #
