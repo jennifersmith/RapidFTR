@@ -11,6 +11,7 @@ describe "SearchService" do
     form.fields << Field.new(:name => "name", :type => Field::TEXT_FIELD, :display_name => "name")
     form.fields << Field.new(:name => "company", :type => Field::TEXT_FIELD, :display_name => "company")
     form.save!
+		Child.build_solr_schema
   end
   
   after :all do
@@ -49,7 +50,6 @@ describe "SearchService" do
     child3 = Child.create( :name => "chris", :company => "marathonman")
     criteria1 = SearchCriteria.new(:field => "name", :value => "tim")
     criteria2 = SearchCriteria.new(:field => "company", :value => "marathonman", :join => "OR")
-
     result = SearchService.search [criteria1,criteria2]
     result.should =~ [child1,child3]
   end

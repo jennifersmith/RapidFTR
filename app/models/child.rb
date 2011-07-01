@@ -37,15 +37,6 @@ class Child < CouchRestRails::Document
 		@field_definitions ||= FormSection.all_enabled_child_fields
 	end
 
-  def self.build_solar_schema
-    fields = ["unique_identifier"]  + Field.all_text_names
-
-    Sunspot.setup(Child) do
-      text *fields
-    end
-  end
- 
-
   def validate_has_at_least_one_field_value
     return true if field_definitions.any? { |field| is_filled_in? field }
     return true if !@file_name.nil? || !@audio_file_name.nil?
