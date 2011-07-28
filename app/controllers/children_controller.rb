@@ -44,7 +44,7 @@ class ChildrenController < ApplicationController
       format.json { render :json => @child.to_json }
       format.csv do
         child_ids = [@child]
-        export_to_csv(child_ids, current_user_name+"_#{file_name_datetime_string}.csv")
+        render_as_csv(child_ids, current_user_name+"_#{file_name_datetime_string}.csv")
       end
       format.pdf do
         pdf_data = ExportGenerator.new(@child).to_full_pdf
@@ -181,7 +181,7 @@ class ChildrenController < ApplicationController
 			pdf_data = ExportGenerator.new(children).to_full_pdf
 			send_pdf(pdf_data, "#{file_basename}.pdf")
     elsif params[:commit] == "Export to CSV"
-      export_to_csv(children, "#{file_basename}.csv")
+      render_as_csv(children, "#{file_basename}.csv")
     end
   end
 
@@ -196,9 +196,6 @@ class ChildrenController < ApplicationController
     send_pdf(pdf_data, "#{file_basename(child)}.pdf")
   end
 
-  def export_to_csv children, filename
-    render_as_csv(children, filename)
-  end
 
   private
 
