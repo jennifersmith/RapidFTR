@@ -235,20 +235,11 @@ class ChildrenController < ApplicationController
     end
   end
 
-  def render_as_csv results_temp, filename
-    field_names = FormSection.all_child_field_names
-    field_names.unshift "unique_identifier"
-    csv = FasterCSV.generate do |rows|
-      if results_temp.nil?
-        results_temp = @children
-      end
-      rows << field_names
-      results_temp.each do |child|
-          rows << field_names.map { |field_name| child[field_name] }
-      end
-    end
-
-    send_data(csv, :filename => filename, :type => 'text/csv')
+  def render_as_csv results, filename
+    results = results || [] # previous version handled nils - needed? 
+		export_generator = ExportGenerator.new results
+		csv_data = export_generator.to_csv
+    send_data(csv_data, :filename => filename, :type => 'text/csv')
   end
 
 end
