@@ -9,9 +9,9 @@ end
 Given /^I am logged in as an admin$/ do
   Given "there is a admin"
   Given "I am on the login page"
-  Given "I fill in \"admin\" for \"user name\""
+  Given "I fill in \"admin\" for \"user_name\""
   Given "I fill in \"123\" for \"password\""
-  Given "I press \"Log In\""
+  Given "I press \"Log in\""
 end
 
 
