@@ -17,12 +17,6 @@ When /^I select search result \#(\d+)$/ do |ordinal|
 end
 
 Then /^I should see "([^\"]*)" in the search results$/ do |value|
-
-  rows = Hpricot(response.body).child_name
-
-  match = rows.find do |row|
-    row.search("a/text()")[0].to_plain_text == value
-  end
-
+	match = page.find('//a', :text => value)
   raise Spec::Expectations::ExpectationNotMetError, "Could not find the value: #{value} in the search results" unless match
 end
