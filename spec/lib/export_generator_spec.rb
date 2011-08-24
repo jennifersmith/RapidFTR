@@ -41,4 +41,19 @@ describe ExportGenerator do
 			subject.options[:filename].should include "yyyx"
 		end
 	end
+	describe "when generating a PDF" do
+		subject do 
+			ExportGenerator.new([Child.new("name"=>"Mary", "unique_identifier" => "abcd"), Child.new("name"=>"Bob", "unique_identifier"=>"bbbe")])
+		end
+		it "should add the correct mime type" do		
+			subject.to_photowall_pdf.options[:type].should == "application/pdf"
+			subject.to_full_pdf.options[:type].should == "application/pdf"
+		end
+		it "should generate the correct filename" do
+			Clock.stub!(:now).and_return(Time.utc(2001,1,1,10,40))
+			subject.to_full_pdf.options[:filename].should == "rapidftr-fulldetails-20010101.pdf"
+			subject.to_photowall_pdf.options[:filename].should == "rapidftr-photowall-20010101.pdf"
+		end
+	end
+
 end

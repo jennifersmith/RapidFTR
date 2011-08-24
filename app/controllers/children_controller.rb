@@ -11,11 +11,15 @@ class ChildrenController < ApplicationController
     respond_to do |format|
       format.html # index.html.erb
       format.xml  { render :xml => @children }
-      format.csv  { render_as_csv @children, "all_records_#{file_name_date_string}.csv" }
+      format.csv  do
+				export_generator = ExportGenerator.new @children
+				csv_export = export_generator.to_csv
+    		send_export(csv_export)
+			end
       format.json { render :json => @children }
       format.pdf do
         pdf_data = ExportGenerator.new(@children).to_full_pdf
-        send_pdf(pdf_data, "#{file_basename}.pdf")
+        send_export pdf_data
       end
     end
   end
@@ -26,7 +30,7 @@ class ChildrenController < ApplicationController
     @child = Child.get(params[:id])
     @user = User.find_by_user_name(current_user_name)
 
-    @form_sections = get_form_sections
+    @form_sections = FormSection.enabled_by_order
 
     @page_name = @child
 
@@ -43,12 +47,13 @@ class ChildrenController < ApplicationController
       format.xml  { render :xml => @child }
       format.json { render :json => @child.to_json }
       format.csv do
-        child_ids = [@child]
-        render_as_csv(child_ids, current_user_name+"_#{file_name_datetime_string}.csv")
+        export_generator = ExportGenerator.new [@child]
+				csv_export = export_generator.to_csv
+    		send_export(csv_export)
       end
       format.pdf do
         pdf_data = ExportGenerator.new(@child).to_full_pdf
-        send_pdf( pdf_data, "#{file_basename(@child)}.pdf" )
+        send_export pdf_data
       end
     end
   end
@@ -58,7 +63,7 @@ class ChildrenController < ApplicationController
   def new
     @page_name = "New child record"
     @child = Child.new
-    @form_sections = get_form_sections
+    @form_sections = FormSection.enabled_by_order
     respond_to do |format|
       format.html
       format.xml  { render :xml => @child }
@@ -69,7 +74,7 @@ class ChildrenController < ApplicationController
   def edit
     @page_name = "Edit child record"
     @child = Child.get(params[:id])
-    @form_sections = get_form_sections
+    @form_sections = FormSection.enabled_by_order
   end
 
   # POST /children
@@ -84,7 +89,7 @@ class ChildrenController < ApplicationController
         format.json { render :json => @child.to_json }
       else
         format.html {
-          @form_sections = get_form_sections
+          @form_sections = FormSection.enabled_by_order
           render :action => "new"
         }
         format.xml  { render :xml => @child.errors, :status => :unprocessable_entity }
@@ -129,114 +134,84 @@ class ChildrenController < ApplicationController
         format.json { render :json => @child.to_json }
       else
         format.html {
-          @form_sections = get_form_sections
+          @form_sections = FormSection.enabled_by_order
           render :action => "edit"
         }
         format.xml  { render :xml => @child.errors, :status => :unprocessable_entity }
       end
     end
-  end
+	end
 
-  # DELETE /children/1
-  # DELETE /children/1.xml
-  def destroy
-    @child = Child.get(params[:id])
-    @child.destroy
+	# DELETE /children/1
+	# DELETE /children/1.xml
+	def destroy
+		@child = Child.get(params[:id])
+		@child.destroy
 
-    respond_to do |format|
-      format.html { redirect_to(children_url) }
-      format.xml  { head :ok }
-      format.json { render :json => {:response => "ok"}.to_json }
-    end
-  end
+		respond_to do |format|
+			format.html { redirect_to(children_url) }
+			format.xml  { head :ok }
+			format.json { render :json => {:response => "ok"}.to_json }
+		end
+	end
 
-  def search
-    @page_name = "Child Search"
-    @aside = "shared/sidebar_links"
-    if (params[:query])
-      @search = Search.new(params[:query]) 
-      if @search.valid?    
-        @results = Child.search(@search)
-        @highlighted_fields = FormSection.sorted_highlighted_fields.map do |field|
-          { :name => field.name, :display_name => field.display_name }
-        end
-      else
-        render :search
-      end
-    end
-    default_search_respond_to
-  end
+	def search
+		@page_name = "Child Search"
+		@aside = "shared/sidebar_links"
+		if (params[:query])
+			@search = Search.new(params[:query]) 
+			if @search.valid?    
+				@results = Child.search(@search)
+				@highlighted_fields = FormSection.sorted_highlighted_fields.map do |field|
+					{ :name => field.name, :display_name => field.display_name }
+				end
+			else
+				render :search
+			end
+		end
+		respond_to do |format|
+			format.html do
+				if @results && @results.length == 1
+					redirect_to child_path( @results.first )
+				end
+			end
+			format.csv do
+				export_generator = ExportGenerator.new @results
+				csv_export = export_generator.to_csv
+				send_export(csv_export)
+			end
+		end
+	end
+	def export_photo_to_pdf
+		child = Child.get(params[:id])
+		pdf_data = ExportGenerator.new(child).to_photowall_pdf
+		send_export(pdf_data)
+	end
 
-  def export_data
-    selected_records = params["selections"] || {}
-    if selected_records.empty?
-      raise ErrorResponse.bad_request('You must select at least one record to be exported')
-    end
-    
-    children = selected_records.sort.map{ |index, child_id| Child.get(child_id) }
+	def export_data
+		selected_records = params["selections"] || {}
+		if selected_records.empty?
+			raise ErrorResponse.bad_request('You must select at least one record to be exported')
+		end
 
-    if params[:commit] == "Export to Photo Wall"
-      export_photos_to_pdf(children, "#{file_basename}.pdf")
-    elsif params[:commit] == "Export to PDF"
-			pdf_data = ExportGenerator.new(children).to_full_pdf
-			send_pdf(pdf_data, "#{file_basename}.pdf")
-    elsif params[:commit] == "Export to CSV"
-      render_as_csv(children, "#{file_basename}.csv")
-    end
-  end
+		children = selected_records.sort.map{ |index, child_id| Child.get(child_id) }
+		export_generator = ExportGenerator.new children
 
-  def export_photos_to_pdf children, filename
-    pdf_data = ExportGenerator.new(children).to_photowall_pdf
-    send_pdf( pdf_data, filename)
-  end
+		if params[:commit] == "Export to Photo Wall"
+			export = export_generator.to_photowall_pdf
+		elsif params[:commit] == "Export to PDF"
+			export = export_generator.to_full_pdf
+		elsif params[:commit] == "Export to CSV"
+			export = export_generator.to_csv
+		end
 
-  def export_photo_to_pdf
-    child = Child.get(params[:id])
-    pdf_data = ExportGenerator.new(child).to_photowall_pdf
-    send_pdf(pdf_data, "#{file_basename(child)}.pdf")
-  end
+		send_export export
+	end
 
+	private
 
-  private
-
-	def file_basename(child = nil)
-		prefix = child.nil? ? current_user_name : child.unique_identifier
-    user = User.find_by_user_name(current_user_name)
-		"#{prefix}-#{Clock.now.in_time_zone(user.time_zone).strftime('%Y%m%d-%H%M')}"
-  end
-
-  def file_name_datetime_string
-    user = User.find_by_user_name(current_user_name)
-    Clock.now.in_time_zone(user.time_zone).strftime('%Y%m%d-%H%M')
-  end
-
-  def file_name_date_string
-    user = User.find_by_user_name(current_user_name)
-    Clock.now.in_time_zone(user.time_zone).strftime("%Y%m%d")
-  end
-
-  def get_form_sections
-    FormSection.enabled_by_order
-  end
-
-  def default_search_respond_to
-    respond_to do |format|
-     format.html do
-       if @results && @results.length == 1
-         redirect_to child_path( @results.first )
-       end
-     end
-      format.csv do
-        render_as_csv(@results, 'rapidftr_search_results.csv') if @results
-      end
-    end
-  end
-
-  def render_as_csv results, filename
-    results = results || [] # previous version handled nils - needed? 
-		export_generator = ExportGenerator.new results
-		csv_data = export_generator.to_csv
-    send_data(csv_data.data, csv_data.options)
-  end
+	def send_export(export) 
+		send_data export.data, export.options 
+	end
 
 end

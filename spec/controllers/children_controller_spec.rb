@@ -5,10 +5,8 @@ def inject_export_generator( fake_export_generator, child_data )
 	ExportGenerator.stub!(:new).with(child_data).and_return( fake_export_generator )
 end
 
+# Todo: get rid of this or reorganise it
 def stub_out_export_generator child_data = []
-	inject_export_generator( stub_export_generator = stub(ExportGenerator) , child_data)
-	stub_export_generator.stub!(:child_photos).and_return('')
-	stub_export_generator
 end
 
 def stub_out_child_get(mock_child = mock(Child))
@@ -245,8 +243,10 @@ describe ChildrenController do
 
       mock_export_generator.
         should_receive(:to_full_pdf).
-        and_return('')
-
+        and_return(ExportGenerator::Export.new :pdf_data, {:foo=>"bar"} )
+			@controller.
+        	should_receive(:send_data).
+       		 with( :pdf_data, {:foo=>"bar"} )
       post(
         :export_data,
         {
@@ -256,31 +256,6 @@ describe ChildrenController do
             '1' => 'child_2'
           },
           :commit => "Export to PDF"
-        }
-      )
-    end
-
-    it "asks the pdf generator to render each child as a Photo Wall" do
-      stub_out_user
-      Clock.stub!(:now).and_return(Time.parse("Jan 01 2000 20:15").utc)
-      children = [:fake_one, :fake_two]
-      inject_export_generator( mock_export_generator = mock(ExportGenerator), children )
-
-      Child.stub(:get).and_return(*children )
-
-      mock_export_generator.
-        should_receive(:to_photowall_pdf).
-        and_return('')
-
-      post(
-        :export_data,
-        {
-          :selections => 
-          {
-            '0' => 'child_1',
-            '1' => 'child_2'
-          },
-          :commit => "Export to Photo Wall"
         }
       )
     end
@@ -318,35 +293,46 @@ describe ChildrenController do
   describe "GET photo_pdf" do
 
     it 'extracts multiple selected ids from post params in correct order' do
-      stub_out_export_generator
-      Child.should_receive(:get).with('child_zero').ordered
-      Child.should_receive(:get).with('child_one').ordered
-      Child.should_receive(:get).with('child_two').ordered
+      
+			child1, child2, child3 = 3.times.map {stub(Child)}
+			export_generator = mock(ExportGenerator) 
+			Child.should_receive(:get).with('child_zero').ordered.and_return(child1)
+      Child.should_receive(:get).with('child_one').ordered.and_return(child2)
+      Child.should_receive(:get).with('child_two').ordered.and_return(child3)
 
-      post(
-        :export_data,
+			export_generator.stub(:to_photowall_pdf).and_return(ExportGenerator::Export.new(:photo_data, {:foo=>:bar})) 
+
+      inject_export_generator(export_generator, [child1, child2, child3]) 
+      
+			@controller.
+        should_receive(:send_data).
+        with( :photo_data, {:foo=>:bar} )
+
+
+			post(
+				:export_data,
+				:commit => "Export to Photo Wall",
         :selections => 
         {
           '2' => 'child_two',
           '0' => 'child_zero',
           '1' => 'child_one'
         }
-      )
-    end
+      )    end
 
     it "sends a response containing the pdf data, the correct content_type and file name, etc" do
       stub_out_user
       Clock.stub!(:now).and_return(Time.utc(2000, 1, 1, 20, 15))
       
 			stubbed_child = stub_out_child_get
-      stub_export_generator = stub_out_export_generator [stubbed_child] #this is getting a bit farcical now
-      stub_export_generator.stub!(:to_photowall_pdf).and_return(:fake_pdf_data)
 
-      @controller.stub!(:current_user_name).and_return('foo-user')
+			stubbed_export_generator = stub(ExportGenerator)
+			inject_export_generator( stubbed_export_generator, [stubbed_child])
+      stubbed_export_generator.stub!(:to_photowall_pdf).and_return(ExportGenerator::Export.new(:fake_pdf_data, {:foo=>:bar}))
 
       @controller.
         should_receive(:send_data).
-        with( :fake_pdf_data, :filename => "foo-user-20000101-2015.pdf", :type => "application/pdf" )
+        with( :fake_pdf_data, {:foo=>:bar} )
 
       post( :export_data, :selections => {'0' => 'ignored'}, :commit => "Export to Photo Wall" )
     end
@@ -366,9 +352,9 @@ describe ChildrenController do
         stub_child = stub('child', :unique_identifier => '1'))
 
       ExportGenerator.should_receive(:new).and_return(export_generator = mock('export_generator'))
-      export_generator.should_receive(:to_photowall_pdf).and_return(:fake_pdf_data)
+      export_generator.should_receive(:to_photowall_pdf).and_return(ExportGenerator::Export.new(:fake_pdf_data, {:foo=>"bar"}))
 
-      @controller.should_receive(:send_data).with(:fake_pdf_data, :filename => '1-20000101-0915.pdf', :type => 'application/pdf')
+      @controller.should_receive(:send_data).with(:fake_pdf_data, {:foo=>"bar"})
 
       get :export_photo_to_pdf, :id => '1'
     end

@@ -48,10 +48,6 @@ class ApplicationController < ActionController::Base
     return session.user_name unless session.nil?
   end
 
-  def send_pdf(pdf_data,filename) 
-    send_data pdf_data, :filename => filename, :type => "application/pdf"
-  end
-
   def name
     self.class.to_s.gsub("Controller", "")
   end
