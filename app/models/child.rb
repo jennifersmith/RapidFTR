@@ -81,7 +81,8 @@ view_by :duplicates_of,
   validates_with_method :validate_has_at_least_one_field_value
   validates_with_method :created_at, :method => :validate_created_at
   validates_with_method :last_updated_at, :method => :validate_last_updated_at
-
+  validates_with_method :duplicate_of, :method => :validate_duplicate_of,  :if => :duplicate, :message =>"There is no record with that ID. Try again."
+  
   def initialize *args
     self['photo_keys'] ||= []
     self['current_photo_key'] = nil
@@ -166,6 +167,13 @@ view_by :duplicates_of,
  		end
    end
 
+  def validate_duplicate_of
+    if self['duplicate_of']
+      true
+    else
+      [false, "There is no record with that ID. Try again."]
+    end
+  end
   def method_missing(m, *args, &block)
     self[m]
   end
@@ -399,7 +407,12 @@ view_by :duplicates_of,
 
   def mark_as_duplicate(parent_id)
     self['duplicate'] = true
-    self['duplicate_of'] = Child.by_unique_identifier(:key => parent_id).first.id
+    duplicate_of = Child.by_unique_identifier(:key => parent_id).first
+    if(duplicate_of.nil?)
+      self['duplicate_of'] = nil
+    else
+      self['duplicate_of'] = duplicate_of.id
+    end
   end
 
   protected
@@ -504,5 +517,4 @@ view_by :duplicates_of,
   def key_for_content_type(content_type)
     Mime::Type.lookup(content_type).to_sym.to_s
   end
-  
 end

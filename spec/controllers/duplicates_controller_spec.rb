@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 require 'spec_helper'
 
 describe DuplicatesController do
@@ -50,11 +51,25 @@ describe DuplicatesController do
   end
   
   describe "POST create" do
+    context "An admin user with an invalid child id" do
+      before :each do
+        fake_admin_login        
+        @child = Child.new
+        @child.stub!(:mark_as_duplicate)
+        @child.stub!(:save).and_return(false)
+        Child.stub!(:get).with("1234").and_return(@child)
+        post :create, :child_id => "1234", :parent_id => "XXYYZZZ"
+      end
+      it "displays the user a good error message" do
+        assigns(:child) == @child
+        should render_template(:new)
+      end
+    end
     context "An admin user with a valid non-duplicate child id" do
       before :each do
         fake_admin_login        
         @child = Child.new
-        @child.stub!(:save)
+        @child.stub!(:save).and_return(true)
       end
       
       it "should mark the child as duplicate" do

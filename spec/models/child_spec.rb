@@ -1055,6 +1055,22 @@ describe Child do
       child_duplicate.duplicate?.should be_true
       child_duplicate.duplicate_of.should == child_active.id
     end
+
+    it "should not be valid if marked iwth non existent child id" do
+      child_duplicate = Child.create(:name => "Jen", :unique_identifier => "fooo")
+
+      child_duplicate.mark_as_duplicate "does_not_exist"
+      child_duplicate.should_not be_valid
+      child_duplicate.errors[:duplicate_of].should include "There is no record with that ID. Try again."
+    end
+
+    it "should be valid if marked with a valid child id" do
+      child_duplicate = Child.create(:name => "Jen", :unique_identifier => "bar")
+      child = Child.create(:name => "Jennifer", :unique_identifier => "baaaar")
+
+      child_duplicate.mark_as_duplicate "baaaar"
+      child_duplicate.should be_valid
+    end
     
     it "should return all duplicate records" do
       record_active = Child.create(:name => "not a dupe", :unique_identifier => "someid")
@@ -1074,7 +1090,9 @@ describe Child do
   private
   
   def create_child(name)
-    Child.create("name" => name, "last_known_location" => "new york")
+    child = Child.new_with_user_name("bob", { "name" => name, "last_known_location" => "new york"})
+    child.save!
+    child
   end
 
   def create_duplicate(parent)

@@ -12,8 +12,10 @@ class DuplicatesController < ApplicationController
   def create
     @child = Child.get params[:child_id]
     @child.mark_as_duplicate params[:parent_id]
-    @child.save
-    
-    redirect_to @child
+    if (@child.save)
+      redirect_to @child
+    else
+      render :new
+    end
   end
 end
